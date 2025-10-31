@@ -1,5 +1,6 @@
 import { Context, Schema, h } from 'koishi'
 import { getTzInfo } from './fetch'
+import { system_prompt, itemAnalysisPrompt } from './prompts'
 
 export const name = 'd2rtz'
 
@@ -10,6 +11,7 @@ export interface Config {
   aiApiKey: string
   aiModel: string
   mockMode: boolean
+  testMode: boolean
 }
 
 export const Config: Schema<Config> = Schema.intersect([
@@ -17,11 +19,12 @@ export const Config: Schema<Config> = Schema.intersect([
     apiUrl: Schema.string().description('API地址').default('https://api.d2-trade.com.cn/api/query/tz_online'),
   }).description('基础设置'),
   Schema.object({
-    ocrApiUrl: Schema.string().description('OCR API地址').default('https://dashscope.aliyuncs.com/api/v1/services/ocr/general-ocr'),
-    aiApiUrl: Schema.string().description('AI API地址').default('https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation'),
+    ocrApiUrl: Schema.string().description('OCR API地址').default('https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions'),
+    aiApiUrl: Schema.string().description('AI API地址').default('https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions'),
     aiApiKey: Schema.string().description('AI API密钥').role('secret'),
     aiModel: Schema.string().description('AI模型名称').default('qwen-plus'),
-    mockMode: Schema.boolean().description('是否启用Mock模式（用于本地测试）').default(false)
+    mockMode: Schema.boolean().description('是否启用Mock模式（用于本地测试）').default(false),
+    testMode: Schema.boolean().description('是否启用测试模式（跳过OCR直接输入文本）').default(false)
   }).description('装备鉴定设置'),
 ])
 
@@ -57,7 +60,24 @@ async function recognizeImage(ctx: Context, config: Config, imageUrl: string): P
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        image: imageUrl,
+        model: "qwen-vl-ocr-2025-08-28",
+        messages: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "image_url",
+                image_url: {
+                  url: imageUrl
+                }
+              },
+              {
+                type: "text",
+                text: "请仅输出图像中的文本内容。"
+              }
+            ]
+          }
+        ]
       }),
     });
 
@@ -70,7 +90,7 @@ async function recognizeImage(ctx: Context, config: Config, imageUrl: string): P
 
     // 提取OCR识别的文字内容
     // 这里需要根据实际OCR API的返回格式进行解析
-    const ocrText = result.text || '无法提取OCR文本';
+    const ocrText = result.choices?.[0]?.message?.content || '无法提取OCR文本';
 
     return { success: true, text: ocrText };
   } catch (error) {
@@ -97,23 +117,25 @@ async function analyzeItem(ctx: Context, config: Config, ocrText: string): Promi
   }
 
   try {
-    const prompt = `你是一个暗黑破坏神游戏专家，你将收到一段OCR识别的装备属性文本，请分析这个装备的价值并给出简要评价，回复控制在200字以内。装备信息：${ocrText}`;
+    const prompt = itemAnalysisPrompt(ocrText);
 
     const response = await fetch(config.aiApiUrl, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${config.aiApiKey}`,
         'Content-Type': 'application/json',
-        'X-DashScope-Model': config.aiModel,
       },
       body: JSON.stringify({
         model: config.aiModel,
-        input: {
-          prompt: prompt,
-        },
-        parameters: {
-          max_tokens: 200,
-        }
+        messages: [
+          { role: "system", content: system_prompt },
+          { 
+            role: "user", 
+            content: prompt 
+          }
+        ],
+        stream: false,
+        enable_thinking: false
       }),
     });
 
@@ -126,7 +148,7 @@ async function analyzeItem(ctx: Context, config: Config, ocrText: string): Promi
 
     // 提取AI分析结果
     // 根据实际API返回格式进行解析
-    const analysis = result.output?.text || '无法获取AI分析结果';
+    const analysis = result.choices?.[0]?.message?.content || '无法获取AI分析结果';
 
     return { success: true, analysis };
   } catch (error) {
@@ -149,6 +171,25 @@ export function apply(ctx: Context, config: Config) {
   ctx.command('鉴定 <image:text>', '暗黑破坏神装备鉴定')
     .option('mock', '-m 使用Mock模式进行测试')
     .action(async ({ session }, image) => {
+      // 测试模式下，直接使用输入的文本作为OCR结果
+      if (config.testMode) {
+        if (!image) {
+          return '测试模式下，请直接输入OCR识别后的文本内容。';
+        }
+        
+        ctx.logger.info(`测试模式：直接使用输入文本进行AI分析`);
+        
+        // 直接进入AI分析
+        const analysisResult = await analyzeItem(ctx, config, image);
+        
+        if (!analysisResult.success) {
+          return `装备价值分析失败: ${analysisResult.error}`;
+        }
+        
+        // 返回结果
+        return analysisResult.analysis;
+      }
+      
       let src = (h.select(image, 'img').map(item => item.attrs.src)[0] ||
         h.select(session.quote?.content, "img").map((a) => a.attrs.src)[0] ||
         h.select(session.quote?.content, "mface").map((a) => a.attrs.url)[0]);
