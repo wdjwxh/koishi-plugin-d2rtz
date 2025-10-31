@@ -100,6 +100,50 @@ async function recognizeImage(ctx: Context, config: Config, imageUrl: string): P
   }
 }
 
+// 预处理OCR文本，过滤掉方括号内容
+export function preprocessOcrText(ocrText: string): string {
+  // 移除方括号和方头括号内的内容，但保留[ETH]无形的标记
+  // 使用正则表达式匹配方括号和方头括号内容，但排除包含"ETH"的情况
+  let processedText = ocrText
+    // 移除包含金装前缀/后缀等信息的方括号内容，但保留[ETH]
+    .replace(/\[(?!ETH\])[^\]]*\]/g, '')
+    // 移除类似[290ED/6/6/4]这样的数值标识
+    .replace(/\[\d+ED\/[\d\/]+\]/g, '')
+    // 移除方头括号『』内的内容
+    .replace(/『[^』]*』/g, '')
+    // 移除缀:xxx这类修饰信息
+    .replace(/缀[：:].*/g, '')
+    // 移除前缀:xxx这类修饰信息
+    .replace(/前缀[：:].*/g, '')
+    // 清理多余的空白行
+    .replace(/\n\s*\n/g, '\n')
+    // 去除行首行尾空格
+    .trim();
+
+  // 分割文本为行数组
+  const lines = processedText.split('\n');
+  
+  // 找到"需要等级"或"等级需求"所在行的索引
+  let levelRequirementIndex = -1;
+  for (let i = 0; i < lines.length; i++) {
+    if (lines[i].includes('需要等級') || lines[i].includes('等级需求') || lines[i].includes('Requires Level')) {
+      levelRequirementIndex = i;
+      break;
+    }
+  }
+
+  // 如果找到了等级需求行，则保留前几行（装备名称）和从等级需求开始的后续行
+  if (levelRequirementIndex !== -1) {
+    // 保留前3行（通常是装备名称相关）和等级需求后的所有行
+    const nameLines = lines.slice(0, Math.min(3, levelRequirementIndex));
+    const propertyLines = lines.slice(levelRequirementIndex);
+    return [...nameLines, ...propertyLines].join('\n').trim();
+  }
+
+  // 如果没有找到等级需求行，直接返回处理后的文本
+  return processedText;
+}
+
 // AI分析函数
 async function analyzeItem(ctx: Context, config: Config, ocrText: string): Promise<{ success: boolean; analysis?: string; error?: string }> {
   ctx.logger.info(`开始AI分析装备: ${ocrText}`);
@@ -118,8 +162,12 @@ async function analyzeItem(ctx: Context, config: Config, ocrText: string): Promi
     };
   }
 
+  // 预处理OCR文本
+  const processedText = preprocessOcrText(ocrText);
+  ctx.logger.info(`预处理后的OCR文本: ${processedText}`);
+
   try {
-    const prompt = itemAnalysisPrompt(ocrText);
+    const prompt = itemAnalysisPrompt(processedText);
 
     const response = await fetch(config.aiApiUrl, {
       method: 'POST',

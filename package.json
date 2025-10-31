@@ -1,7 +1,7 @@
 {
   "name": "@wdjwxh/koishi-plugin-d2rtz",
   "description": "get d2r info",
-  "version": "1.0.4",
+  "version": "1.0.8",
   "main": "lib/index.js",
   "typings": "lib/index.d.ts",
   "files": [
