@@ -7,6 +7,7 @@ export const name = 'd2rtz'
 export interface Config {
   apiUrl?: string
   ocrApiUrl: string
+  ocrApiKey: string
   aiApiUrl: string
   aiApiKey: string
   aiModel: string
@@ -20,6 +21,7 @@ export const Config: Schema<Config> = Schema.intersect([
   }).description('基础设置'),
   Schema.object({
     ocrApiUrl: Schema.string().description('OCR API地址').default('https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions'),
+    ocrApiKey: Schema.string().description('OCR API密钥').role('secret'),
     aiApiUrl: Schema.string().description('AI API地址').default('https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions'),
     aiApiKey: Schema.string().description('AI API密钥').role('secret'),
     aiModel: Schema.string().description('AI模型名称').default('qwen-plus'),
@@ -56,7 +58,7 @@ async function recognizeImage(ctx: Context, config: Config, imageUrl: string): P
     const response = await fetch(config.ocrApiUrl, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${config.aiApiKey}`,
+        'Authorization': `Bearer ${config.ocrApiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
