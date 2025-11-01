@@ -113,12 +113,27 @@ function sendGroupMessage(text: string, config?: Config) {
     });
 }
 
+// 清理缓存文件的函数
+function clearCache() {
+  try {
+    const cacheDir = path.join(__dirname, '../cache');
+    const cacheFile = path.join(cacheDir, 'tz_online.json');
+    if (fs.existsSync(cacheFile)) {
+      fs.unlinkSync(cacheFile);
+    }
+  } catch (error) {
+    console.error('Error deleting cache file:', error);
+  }
+}
+
 // 处理响应数据并生成提示语的函数
 function processTzOnlineData(data: any) {
   console.log('Received data:', JSON.stringify(data, null, 2)); // 添加日志，显示完整数据
   
   if (!data || !data.data || !Array.isArray(data.data) || data.data.length < 2) {
-    throw new Error('Invalid data format');
+    // 数据格式错误时，删除缓存文件
+    clearCache();
+    throw new Error('还未获取到上游数据，请稍后再试。');
   }
 
   // 按照时间排序数据
@@ -139,10 +154,14 @@ function processTzOnlineData(data: any) {
   const nextAreaInfo = areas[nextZoneId];
   
   if (!currentAreaInfo) {
+    // 数据错误时，删除缓存文件
+    clearCache();
     throw new Error(`Area info not found for current zone: ${currentZoneId}`);
   }
   
   if (!nextAreaInfo) {
+    // 数据错误时，删除缓存文件
+    clearCache();
     throw new Error(`Area info not found for next zone: ${nextZoneId}`);
   }
   
