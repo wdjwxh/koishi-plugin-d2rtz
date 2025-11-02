@@ -111,12 +111,12 @@ export function preprocessOcrText(ocrText: string): string {
     .replace(/\[\d+ED\/[\d\/]+\]/g, '')
     // 移除方头括号『』内的内容
     .replace(/『[^』]*』/g, '')
+    // 添加新规则：移除以单引号开头、以』结尾的行
+    .replace(/'.*?』/g, '')
     // 移除缀:xxx这类修饰信息
     .replace(/缀[：:].*/g, '')
     // 移除前缀:xxx这类修饰信息
     .replace(/前缀[：:].*/g, '')
-    // 添加新规则：移除以单引号开头、以』结尾的行
-    .replace(/'.*?』/g, '')
     // 清理多余的空白行
     .replace(/\n\s*\n/g, '\n')
     // 去除行首行尾空格
