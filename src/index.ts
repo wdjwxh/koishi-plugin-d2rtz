@@ -115,6 +115,8 @@ export function preprocessOcrText(ocrText: string): string {
     .replace(/缀[：:].*/g, '')
     // 移除前缀:xxx这类修饰信息
     .replace(/前缀[：:].*/g, '')
+    // 添加新规则：移除以单引号开头、以』结尾的行
+    .replace(/'.*?』/g, '')
     // 清理多余的空白行
     .replace(/\n\s*\n/g, '\n')
     // 去除行首行尾空格
@@ -123,10 +125,20 @@ export function preprocessOcrText(ocrText: string): string {
   // 分割文本为行数组
   const lines = processedText.split('\n');
   
+  // 过滤掉空行和只包含特殊字符的行
+  const filteredLines = lines.filter(line => {
+    // 移除行首的引号和空格
+    const cleanLine = line.trim().replace(/^'+/, '');
+    // 过滤掉空行或者只包含特殊符号的行
+    return cleanLine.length > 0 && !/^['']*$/g.test(cleanLine);
+  });
+  
+  processedText = filteredLines.join('\n');
+
   // 找到"需要等级"或"等级需求"所在行的索引
   let levelRequirementIndex = -1;
-  for (let i = 0; i < lines.length; i++) {
-    if (lines[i].includes('需要等級') || lines[i].includes('等级需求') || lines[i].includes('Requires Level')) {
+  for (let i = 0; i < filteredLines.length; i++) {
+    if (filteredLines[i].includes('需要等級') || filteredLines[i].includes('等级需求') || filteredLines[i].includes('Requires Level')) {
       levelRequirementIndex = i;
       break;
     }
