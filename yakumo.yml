@@ -1,0 +1,27 @@
+- id: vodkrp
+  name: yakumo
+  config:
+    pipeline:
+      build:
+        - tsc
+        - esbuild
+      clean:
+        - tsc --clean
+- id: 6jkslm
+  name: yakumo-esbuild
+- id: yz7wvp
+  name: yakumo-tsc
+- id: 3ierql
+  name: yakumo/list
+- id: on7xqj
+  name: yakumo/prepare
+- id: pb355y
+  name: yakumo/publish
+- id: wwg04l
+  name: yakumo/test
+- id: 690llt
+  name: yakumo/upgrade
+- id: qs4dzb
+  name: yakumo/version
+- id: s0ffpr
+  name: yakumo/run
