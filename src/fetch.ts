@@ -142,7 +142,9 @@ function processTzOnlineData(data: any) {
   // 第一个是当前区域，第二个是下一个区域
   const currentZoneData = sortedData[0];
   const nextZoneData = sortedData[1];
+  // 1116 更新，不再有id，直接读取返回
   
+  /*
   const currentZoneId = currentZoneData.zone;
   const nextZoneId = nextZoneData.zone;
   
@@ -152,22 +154,17 @@ function processTzOnlineData(data: any) {
   // 根据zone_id查找区域信息
   const currentAreaInfo = areas[currentZoneId];
   const nextAreaInfo = areas[nextZoneId];
+  */
   
-  if (!currentAreaInfo) {
+  if (!currentZoneData || !nextZoneData) {
     // 数据错误时，删除缓存文件
     clearCache();
-    throw new Error(`Area info not found for current zone: ${currentZoneId}`);
-  }
-  
-  if (!nextAreaInfo) {
-    // 数据错误时，删除缓存文件
-    clearCache();
-    throw new Error(`Area info not found for next zone: ${nextZoneId}`);
+    throw new Error(`Area info not found for current zone`);
   }
   
   // 组装提示语
-  const message = `TZ：${currentAreaInfo.name}，掉落：${currentAreaInfo.tier}\n` +
-                  `Next：${nextAreaInfo.name}，掉落：${nextAreaInfo.tier}`;
+  const message = `TZ：${currentZoneData["name"]}，掉落：${currentZoneData["tier-loot"]}\n` +
+                  `Next：${nextZoneData["name"]}，掉落：${nextZoneData["tier-loot"]}`;
   
   return message;
 }
