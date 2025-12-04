@@ -11,6 +11,10 @@ on:
   pull_request:
     branches: [ main ]
 
+permissions:
+  id-token: write  # Required for OIDC
+  contents: read
+
 jobs:
   build-and-publish:
     runs-on: ubuntu-latest
@@ -24,5 +28,4 @@ jobs:
       - run: yarn install
       - run: yarn build
       - run: npm publish
-        env:
-          NODE_AUTH_TOKEN: ${{secrets.npm_token}}
+ 
