@@ -16,6 +16,11 @@
     "pub": "yakumo publish"
   },
   "license": "MIT",
+  "homepage": "https://github.com/wdjwxh/koishi-plugin-d2rtz",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/wdjwxh/koishi-plugin-d2rtz.git"
+  },
   "keywords": [
     "chatbot",
     "koishi",
