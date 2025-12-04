@@ -62,7 +62,7 @@ async function recognizeImage(ctx: Context, config: Config, imageUrl: string): P
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: "qwen-vl-ocr-2025-08-28",
+        model: "qwen-vl-ocr-latest",
         messages: [
           {
             role: "user",
